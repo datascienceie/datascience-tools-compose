@@ -1,0 +1,132 @@
+version: '3'
+services:
+
+  python:
+    image: cmihai/python:v1
+    build: services/python
+
+  postgis:
+    image: cmihai/postgis:10
+    container_name: 'cmihai_postgis'
+    restart: 'always'
+    build: services/postgis
+    env_file:
+      - ./config/postgres.env
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+      - ./data/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  timescaledb:
+    image: timescale/timescaledb-postgis
+    container_name: 'cmihai_timescaledb'
+    restart: 'always'
+    env_file:
+      - ./config/postgres.env
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./data/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  redis:
+    image: redis:alpine
+    container_name: 'cmihai_redis'
+    restart: 'always'
+    volumes:
+      - redisdata:/data
+
+  mongo:
+    image: mongo
+    container_name: 'cmihai_mongo'
+    restart: 'always'
+    volumes:
+      - mongodata:/data/db
+
+  sonarqube:
+    image: sonarqube
+    container_name: 'cmihai_sonarqube'
+    restart: 'always'
+    labels:
+      - traefik.enable=true
+      - traefik.frontend.rule=Host:sonarqube.docker.localhost
+      - traefik.port=9000
+    depends_on:
+      - postgres
+    links:
+      - postgres
+    env_file:
+      - ./config/sonarqube.env
+    volumes:
+      - sonarqube_conf:/opt/sonarqube/conf
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_bundled-plugins:/opt/sonarqube/lib/bundled-plugins
+
+  s3server:
+    image: scality/s3server
+    container_name: 'cmihai_s3server'
+    restart: 'always'
+    env_file:
+      - ./config/s3server.env
+    ports:
+      - '8000:8000'
+    volumes:
+      - s3server_data:/usr/src/app/localData
+      - s3server_metadata:/usr/src/app/localMetadata
+
+  proxy:
+    image: quay.io/dtan4/nginx-basic-auth-proxy:latest
+    container_name: 'cmihai_proxy'
+    restart: 'always'
+    ports:
+      - '81:80'
+    env_file:
+      - ./config/proxy.env
+    links:
+      - jenkins
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: 'cmihai_jenkins'
+    restart: 'always'
+    ports:
+      - '8082:8080'
+      - '50000:50000'
+    env_file:
+      - ./config/jenkins.env
+    volumes:
+      - jenkins_home:/var/jenkins_home
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: 'cmihai_rabbitmq'
+    restart: 'always'
+    ports:
+      - '15672:15672'
+      - '5672:5672'
+    env_file:
+      - ./config/rabbitmq.env
+
+  couchdb:
+    image: couchdb
+    container_name: 'cmihai_couchdb'
+    restart: 'always'
+    ports:
+      - '5984:5984'
+    volumes:
+      - couchdbdata:/opt/couchdb/data
+
+volumes:
+  postgres_data:
+  postgis_data:
+  timescaledb_data:
+  redisdata:
+  mongodata:
+  sonarqube_conf:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_bundled-plugins:
+  portainer_volume:
+  minio_volume:
+  jenkins_home:
+  s3server_data:
+  s3server_metadata:
+  couchdbdata:

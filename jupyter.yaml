@@ -1,0 +1,20 @@
+version: '3'
+services:
+
+  # Jupyter Lab
+  jupyter:
+    image: cmihai/jupyter:v1
+    container_name: 'cmihai-jupyter'
+    hostname: jupyter
+    restart: 'always'
+    ports:
+      - '8888:8888'
+    env_file:
+      - ./config/jupyter.env
+    volumes:
+      - jupyter:/home/user/jupyter
+    labels:
+      kompose.service.type: nodeport
+
+volumes:
+  jupyter:

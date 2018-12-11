@@ -1,0 +1,9 @@
+che:
+   image: eclipse/che-server:6.0.0
+   ports:
+     - '8080:8080'
+   restart: always
+   volumes:
+     - /var/run/docker.sock:/var/run/docker.sock
+     - ./che_data:/data
+   container_name: che

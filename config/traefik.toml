@@ -1,0 +1,17 @@
+################################################################
+# API and dashboard configuration
+################################################################
+[api]
+
+# Enable the web backend.
+[web]
+address = ":8080"
+
+
+################################################################
+# Docker configuration backend
+################################################################
+[docker]
+domain = "docker.localhost"
+watch = true
+exposedbydefault = false

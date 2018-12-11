@@ -1,0 +1,147 @@
+version: '3'
+services:
+
+  # Jupyter Lab
+  jupyter:
+    image: cmihai/jupyter:v1
+    container_name: 'cmihai_jupyter'
+    hostname: jupyter
+    restart: 'always'
+    build: services/jupyter
+    env_file:
+      - ./config/jupyter.env
+    volumes:
+      - s3-jupyter:/home/user/s3-jupyter
+    labels:
+      - traefik.backend=jupyter
+      - traefik.frontend.rule=Host:jupyter.docker.localhost
+      - traefik.port=8888
+    depends_on:
+      - traefik
+      - postgres
+    links:
+      - postgres
+
+
+  ########################################################################
+  ## Data
+  ########################################################################
+  # Postgres - SQL Database
+  postgres:
+    image: postgres:11.1-alpine
+    container_name: 'cmihai_postgres'
+    restart: 'always'
+    env_file:
+      - ./config/postgres.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./data/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # Minio - S3 Compatible storage
+  minio:
+    image: minio/minio
+    container_name: 'cmihai_minio'
+    restart: 'always'
+    labels:
+      - traefik.enable=true
+      - traefik.frontend.rule=Host:minio.docker.localhost
+      - traefik.port=9000
+    env_file:
+      - ./config/minio.env
+    volumes:
+      - minio_volume:/data
+    command: server /data
+
+
+  ########################################################################
+  ## Visualization
+  ########################################################################
+  # Superset
+  superset:
+      image: tylerfowler/superset:0.24
+      container_name: 'cmihai_superset'
+      restart: 'always'
+      labels:
+          - traefik.enable=true
+          - traefik.frontend.rule=Host:superset.docker.localhost
+          - traefik.port=9000
+      depends_on:
+          - postgres
+      env_file:
+          - ./config/superset.env
+
+  # Grafana
+  grafana:
+    image: grafana/grafana
+    container_name: 'cmihai_grafana'
+    restart: 'always'
+    labels:
+      - traefik.enable=true
+      - traefik.frontend.rule=Host:grafana.docker.localhost
+      - traefik.port=3000
+    depends_on:
+      - postgres
+    env_file:
+      - ./config/grafana.env
+
+
+  ########################################################################
+  ## Management tooling
+  ########################################################################
+  # PGAdmin4 - Manage PostreSQL
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: 'cmihai_pgadmin'
+    restart: 'always'
+    depends_on:
+        - postgres
+    env_file:
+        - ./config/pgadmin.env
+    labels:
+        - traefik.enable=true
+        - traefik.frontend.rule=Host:pgadmin.docker.localhost
+        - traefik.port=80
+    links:
+        - postgres
+
+  # Portainer - Manage Containers
+  portainer:
+    image: portainer/portainer
+    container_name: 'cmihai_portainer'
+    restart: 'always'
+    labels:
+        - traefik.enable=true
+        - traefik.frontend.rule=Host:portainer.docker.localhost
+        - traefik.port=9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_volume:/data
+    command: -H unix:///var/run/docker.sock
+
+  # Traefik - Authentication, SSL, Proxy and Load Balancer
+  traefik:
+    image: traefik:v1.7.4-alpine
+    hostname: traefik
+    container_name: 'cmihai_traefik'
+    command: --api --docker
+    restart: 'always'
+    ports:
+      - '80:80'
+      - '443:443'
+      - '8080:8080'
+    volumes:
+      - ./config/traefik.toml:/etc/traefik/traefik.toml
+      - /var/run/docker.sock:/var/run/docker.sock
+
+
+############################
+## Volumes
+############################
+
+volumes:
+  s3-jupyter:
+    external:
+      name: s3-jupyter
+  postgres_data:
+  portainer_volume:
+  minio_volume:
