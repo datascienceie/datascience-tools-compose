@@ -85,6 +85,8 @@ services:
       - traefik.enable=true
       - traefik.frontend.rule=Host:pgadmin.docker.localhost
       - traefik.port=80
+    ports:
+      - 8080:80
     links:
       - postgres
 
