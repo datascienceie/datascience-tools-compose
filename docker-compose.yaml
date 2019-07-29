@@ -10,8 +10,6 @@ services:
     build: services/jupyter
     env_file:
       - ./config/jupyter.env
-    volumes:
-      - s3-jupyter:/home/user/s3-jupyter
     labels:
       - traefik.backend=jupyter
       - traefik.frontend.rule=Host:jupyter.docker.localhost
@@ -139,9 +137,6 @@ services:
 ############################
 
 volumes:
-  s3-jupyter:
-    external:
-      name: s3-jupyter
   postgres_data:
   portainer_volume:
   minio_volume:
